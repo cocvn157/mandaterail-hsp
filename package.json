@@ -1,0 +1,31 @@
+{
+  "name": "mandaterail-hsp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MandateRail HSP — Cryptographic EIP-712 Payment Mandates, x402 Gatekeeper & Verifiable A2A Settlement on HashKey Chain",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "compile:contracts": "node scripts/compile.mjs",
+    "deploy:testnet": "node --experimental-strip-types scripts/deploy.ts --network testnet",
+    "deploy:mainnet": "node --experimental-strip-types scripts/deploy.ts --network mainnet"
+  },
+  "dependencies": {
+    "lucide-react": "^0.544.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "viem": "^2.37.9"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.11",
+    "@vitejs/plugin-react": "^5.2.0",
+    "solc": "^0.8.28",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}
