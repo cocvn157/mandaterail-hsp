@@ -11,7 +11,7 @@ interface AbiItem {
 
 describe("MandateSettlementVault.sol Compilation & ABI Parity", () => {
   const artifact = compileVaultContract();
-  const abi = artifact.abi as AbiItem[];
+  const abi = artifact.abi as unknown as readonly AbiItem[];
 
   it("compiles cleanly with non-empty EVM bytecode", () => {
     expect(artifact.contractName).toBe("MandateSettlementVault");
