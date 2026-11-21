@@ -3,6 +3,8 @@
 **Track:** Track 2 — Agent Payments & A2A Settlement (via HSP)  
 **Project Name:** MandateRail HSP  
 **Tagline:** Fail-closed EIP-712 Payment Mandates, `x402` HTTP Gatekeeper & Verifiable A2A Settlement Vault on HashKey Chain  
+**GitHub Repository:** https://github.com/cocvn157/mandaterail-hsp  
+**Live Web Console (GitHub Pages):** https://cocvn157.github.io/mandaterail-hsp/  
 
 ---
 
@@ -58,5 +60,5 @@ As AI agents transition from chat assistants to autonomous economic actors, Agen
 > 1. **Tuyệt đối không tự mua HSK bằng tiền thật.**
 > 2. Để test deploy trên **Testnet (`133`)**: lấy HSK miễn phí tại faucet chính thức `https://hsk.xyz/faucet`, điền private key ví test mới vào `.env` (không commit `.env`) và chạy `npm.cmd run deploy:testnet`.
 > 3. Để deploy lên **Mainnet (`177`)**: tham gia kênh Telegram/cộng đồng chính thức từ trang HashFans (`https://hashfans.io`) / trang DoraHacks (`https://dorahacks.io/hackathon/hskchainseoul`) để **xin gói gas grant miễn phí từ BTC (organizer HSK mainnet gas grant)** rồi chạy `npm.cmd run deploy:mainnet`.
-> 4. Tạo repo mới trên GitHub (`@cocvn157/mandaterail-hsp` hoặc tên tương đương), `git remote add origin ...` và `git push -u origin main` (toàn bộ commit đã được ký SSH `Verified` sẵn và giữ lịch sử commit tuyến tính đúng yêu cầu của DoraHacks).
-> 5. Upload `demo/mandaterail-hsp-demo.mp4` (YouTube/Loom/DoraHacks) và dán nội dung mục 1–3 ở trên vào form Track 2 trên DoraHacks trước `11:00 VN ngày 03/12/2026`.
+> 4. **GitHub & Live Demo đã publish sẵn (`$0`):** Repo công khai tại `https://github.com/cocvn157/mandaterail-hsp` (toàn bộ commit đã được ký SSH `Verified` và giữ lịch sử commit tuyến tính đúng yêu cầu của DoraHacks) và Web Console chạy trực tiếp tại `https://cocvn157.github.io/mandaterail-hsp/`.
+> 5. Upload `demo/mandaterail-hsp-demo.mp4` (YouTube/Loom/DoraHacks), điền link GitHub + link GitHub Pages ở trên và dán nội dung mục 1–3 vào form Track 2 trên DoraHacks trước `11:00 VN ngày 03/12/2026`.
