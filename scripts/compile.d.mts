@@ -5,7 +5,6 @@ export interface CompiledVaultArtifact {
   bytecode: `0x${string}`;
   deployedBytecode: `0x${string}`;
   bytecodeBytes: number;
-  compiledAt: string;
 }
 
 export function compileVaultContract(): CompiledVaultArtifact;

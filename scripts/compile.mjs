@@ -58,8 +58,7 @@ export function compileVaultContract() {
     abi: compiled.abi,
     bytecode,
     deployedBytecode,
-    bytecodeBytes: compiled.evm.bytecode.object.length / 2,
-    compiledAt: new Date().toISOString()
+    bytecodeBytes: compiled.evm.bytecode.object.length / 2
   };
 
   fs.mkdirSync(artifactDir, { recursive: true });
