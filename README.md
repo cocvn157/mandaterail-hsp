@@ -6,6 +6,20 @@ Built for **HSK Chain Horizon Hackathon · Seoul (Track 2: Agent Payments & A2A 
 
 ---
 
+## Live On-Chain Verification (HashKey Chain Testnet `133`)
+
+> Per official HSK Chain Horizon organizer guidance, Testnet (`133`) deployments are accepted throughout the hackathon while winning teams migrate to Mainnet (`177`) post-hackathon. Every on-chain invariant has been executed and verified live:
+
+- **Deployed Contract (`MandateSettlementVault.sol`):** [`0xc91469d4acc815b485f5b961bf49c7f0764a50cf`](https://testnet-explorer.hskchain.net/address/0xc91469d4acc815b485f5b961bf49c7f0764a50cf) (`chainId: 133`)
+- **Deployer EOA:** `0x2584f4d5a0f9486dEe857b7F997f20f1A21a7D26`
+- **Deployment Tx Hash:** [`0xb955f22a108fe694bf60a7b49d8e5a6b5c45e8be099279093c466b88c12bb4a0`](https://testnet-explorer.hskchain.net/tx/0xb955f22a108fe694bf60a7b49d8e5a6b5c45e8be099279093c466b88c12bb4a0)
+- **Live EIP-712 `settleMandate()` Tx Hash (Block `#36081959`):** [`0x539c74e0bebf40aa38e1aabf8e297e6e2ccca9c8b80d3ca41caf1e024a083c12`](https://testnet-explorer.hskchain.net/tx/0x539c74e0bebf40aa38e1aabf8e297e6e2ccca9c8b80d3ca41caf1e024a083c12)
+  - Emitted `SettlementReceipt` ID: `0xfbf168d51c8120f5a467fd38ab2f2e170c49af7449d71af8b5cae53e7f1e25c5`
+  - EIP-712 `mandateDigest`: `0x82bd22c5d6519222190b8c4c9c11a929c9d8de3252203b4c872600822ac47460`
+  - Verified State: `totalReceipts() == 1`, `usedNonces(deployer, 1) == true`, and re-simulating the exact signed mandate reverts on-chain (`NonceAlreadyUsed`).
+
+---
+
 ## Why MandateRail HSP?
 
 Autonomous AI agents hiring peer agents over HTTP cannot safely hold unrestricted hot wallets. **MandateRail HSP** introduces a programmable, fail-closed **HashKey Settlement Platform (HSP)** payment rail combining:
@@ -45,7 +59,7 @@ Autonomous AI agents hiring peer agents over HTTP cannot safely hold unrestricte
 
 | Network | Chain ID | Hex | Public RPC | Block Explorer | Gas Source (`$0` Capital) |
 | :--- | :---: | :---: | :--- | :--- | :--- |
-| **HashKey Chain Testnet** | `133` | `0x85` | `https://testnet.hsk.xyz` | `https://testnet-explorer.hskchain.net` | Free Faucet: `https://hsk.xyz/faucet` |
+| **HashKey Chain Testnet** | `133` | `0x85` | `https://testnet.hsk.xyz` | `https://testnet-explorer.hskchain.net` | Free Faucet: `https://faucet.hsk.xyz` |
 | **HashKey Chain Mainnet** | `177` | `0xb1` | `https://mainnet.hsk.xyz` | `https://hsk.blockscout.com` | Official HashFans / DoraHacks Organizer Gas Grant |
 
 ---

@@ -15,7 +15,7 @@ const HSK_NETWORKS = {
     chainId: 133,
     rpcUrl: process.env.HSK_TESTNET_RPC || "https://testnet.hsk.xyz",
     explorerUrl: "https://testnet-explorer.hskchain.net",
-    gasGrantNote: "Claim free Testnet HSK at https://hsk.xyz/faucet"
+    gasGrantNote: "Claim free Testnet HSK at https://faucet.hsk.xyz"
   },
   mainnet: {
     name: "HashKey Chain Mainnet",

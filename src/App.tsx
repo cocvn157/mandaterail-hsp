@@ -241,6 +241,30 @@ export default function App() {
         <span>
           <strong>{cfg.name}</strong> (Chain ID <span className="mono">{cfg.chainId}</span>) ·{" "}
           {cfg.settlementNote}
+          {network === "testnet" && (
+            <>
+              {" "}
+              <a
+                href={`${cfg.explorerUrl}/address/${cfg.defaultVaultAddress}`}
+                target="_blank"
+                rel="noreferrer"
+                className="mono"
+                style={{ color: "#34d399", textDecoration: "underline" }}
+              >
+                Vault {cfg.defaultVaultAddress.slice(0, 8)}...{cfg.defaultVaultAddress.slice(-6)}
+              </a>
+              {" · "}
+              <a
+                href={`${cfg.explorerUrl}/tx/0x539c74e0bebf40aa38e1aabf8e297e6e2ccca9c8b80d3ca41caf1e024a083c12`}
+                target="_blank"
+                rel="noreferrer"
+                className="mono"
+                style={{ color: "#38bdf8", textDecoration: "underline" }}
+              >
+                Live Settle Tx 0x539c...3c12
+              </a>
+            </>
+          )}
         </span>
         <span className="mono">
           Buyer {SANDBOX_BUYER_ADDRESS.slice(0, 8)}... → Provider {SANDBOX_PROVIDER_ADDRESS.slice(0, 8)}...

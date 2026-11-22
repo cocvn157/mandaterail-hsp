@@ -31,6 +31,10 @@ describe("HashKey Chain Network & Canonical Task Hashing", () => {
     expect(HSK_NETWORKS.testnet.chainId).toBe(133);
     expect(HSK_NETWORKS.testnet.rpcUrl).toBe("https://testnet.hsk.xyz");
     expect(HSK_NETWORKS.testnet.explorerUrl).toBe("https://testnet-explorer.hskchain.net");
+    expect(HSK_NETWORKS.testnet.faucetUrl).toBe("https://faucet.hsk.xyz");
+    expect(HSK_NETWORKS.testnet.defaultVaultAddress.toLowerCase()).toBe(
+      "0xc91469d4acc815b485f5b961bf49c7f0764a50cf"
+    );
 
     expect(HSK_NETWORKS.mainnet.chainId).toBe(177);
     expect(HSK_NETWORKS.mainnet.rpcUrl).toBe("https://mainnet.hsk.xyz");

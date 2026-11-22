@@ -48,15 +48,16 @@ export const HSK_NETWORKS: Record<HskNetworkKey, HskNetworkConfig> = {
     chainIdHex: "0x85",
     rpcUrl: "https://testnet.hsk.xyz",
     explorerUrl: "https://testnet-explorer.hskchain.net",
-    faucetUrl: "https://hsk.xyz/faucet",
+    faucetUrl: "https://faucet.hsk.xyz",
     nativeCurrency: {
       name: "HashKey EcoPoints",
       symbol: "HSK",
       decimals: 18
     },
-    // Deterministic CREATE2-style preview vault address until deployed via scripts/deploy.ts
-    defaultVaultAddress: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-    settlementNote: "Zero-capital development environment funded via official HSK Testnet Faucet."
+    // Live MandateSettlementVault deployed on HashKey Chain Testnet (chainId 133)
+    defaultVaultAddress: "0xc91469d4acc815b485f5b961bf49c7f0764a50cf",
+    settlementNote:
+      "Live MandateSettlementVault deployed on HSK Testnet (133) with verified on-chain SettlementReceipt proof."
   },
   mainnet: {
     key: "mainnet",
