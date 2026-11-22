@@ -1,15 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { parseUnits } from "viem";
+import { encodeErrorResult, parseUnits } from "viem";
 import {
   buildMandateDomain,
+  deserializeMandateFromJson,
   hashCanonicalTaskPayload,
   recoverMandateSigner,
+  serializeMandateForJson,
   signPaymentMandate,
   verifyPaymentMandateSignature,
   type PaymentMandate
 } from "../src/protocol/eip712";
 import { DAILY_WINDOW_SECONDS, MandateGatekeeper } from "../src/protocol/gatekeeper";
-import { HSK_NETWORKS, SETTLEMENT_TOKENS, ZERO_ADDRESS } from "../src/protocol/networks";
+import {
+  CIRCLE_SEPOLIA_USDC,
+  HSK_NETWORKS,
+  LIVE_TESTNET_SHOWCASE,
+  SETTLEMENT_TOKENS,
+  ZERO_ADDRESS
+} from "../src/protocol/networks";
+import { buildVerificationSnippets, decodeVaultRevertError } from "../src/protocol/onChainVerifier";
+import { MANDATE_VAULT_ABI } from "../src/protocol/vaultAbi";
 import {
   buildPaymentRequiredResponse,
   decodeXPaymentHeader,
@@ -346,5 +356,206 @@ describe("MandateGatekeeper Settlement, Rolling Budget & Principal Governance", 
       expect(item.blockedAsExpected).toBe(true);
       expect(item.actualDecision.status).toBe("REJECTED");
     }
+  });
+});
+
+describe("Live On-Chain Verifier, Error Decoding & Dual-Rail Readiness", () => {
+  it("exposes verified HSK Testnet 133 showcase TXs and Circle Sepolia USDC dual-rail config", () => {
+    expect(LIVE_TESTNET_SHOWCASE.chainId).toBe(133);
+    expect(LIVE_TESTNET_SHOWCASE.vaultAddress).toBe("0xc91469d4acc815b485f5b961bf49c7f0764a50cf");
+    expect(LIVE_TESTNET_SHOWCASE.deployTxHash).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(LIVE_TESTNET_SHOWCASE.settlementTx1Hash).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(LIVE_TESTNET_SHOWCASE.settlementTx2Hash).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(LIVE_TESTNET_SHOWCASE.policyTxHash).toMatch(/^0x[0-9a-f]{64}$/);
+
+    expect(CIRCLE_SEPOLIA_USDC.chainId).toBe(11155111);
+    expect(CIRCLE_SEPOLIA_USDC.tokenAddress).toBe("0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238");
+    expect(CIRCLE_SEPOLIA_USDC.decimals).toBe(6);
+  });
+
+  it("decodes NonceAlreadyUsed custom error from raw EVM revert bytes", () => {
+    const raw = encodeErrorResult({
+      abi: MANDATE_VAULT_ABI,
+      errorName: "NonceAlreadyUsed",
+      args: [LIVE_TESTNET_SHOWCASE.deployerAddress, 2n]
+    });
+    const decoded = decodeVaultRevertError(raw);
+    expect(decoded.errorName).toBe("NonceAlreadyUsed");
+    expect(decoded.args).toEqual([LIVE_TESTNET_SHOWCASE.deployerAddress, "2"]);
+    expect(decoded.summary).toContain("NonceAlreadyUsed(");
+  });
+
+  it("decodes OverMaxPerTx and DailyCapExceeded parameterized custom errors", () => {
+    const overMaxRaw = encodeErrorResult({
+      abi: MANDATE_VAULT_ABI,
+      errorName: "OverMaxPerTx",
+      args: [50_000_000n, 25_000_000n]
+    });
+    const overDecoded = decodeVaultRevertError(overMaxRaw);
+    expect(overDecoded.errorName).toBe("OverMaxPerTx");
+    expect(overDecoded.args).toEqual(["50000000", "25000000"]);
+
+    const dailyRaw = encodeErrorResult({
+      abi: MANDATE_VAULT_ABI,
+      errorName: "DailyCapExceeded",
+      args: [110_000_000n, 100_000_000n]
+    });
+    const dailyDecoded = decodeVaultRevertError(dailyRaw);
+    expect(dailyDecoded.errorName).toBe("DailyCapExceeded");
+    expect(dailyDecoded.args).toEqual(["110000000", "100000000"]);
+  });
+
+  it("decodes zero-argument custom errors and handles unknown revert payloads gracefully", () => {
+    const invalidSigRaw = encodeErrorResult({
+      abi: MANDATE_VAULT_ABI,
+      errorName: "InvalidSignature"
+    });
+    const sigDecoded = decodeVaultRevertError(invalidSigRaw);
+    expect(sigDecoded.errorName).toBe("InvalidSignature");
+    expect(sigDecoded.summary).toBe("InvalidSignature()");
+
+    const unknownDecoded = decodeVaultRevertError("0xdeadbeef");
+    expect(unknownDecoded.errorName).toBe("UnknownRevertData");
+  });
+
+  it("generates accurate curl, cast, and viem 5-second verification snippets", () => {
+    const snippets = buildVerificationSnippets();
+    expect(snippets.curl).toContain("https://testnet.hsk.xyz");
+    expect(snippets.curl).toContain("0xa23a720f");
+    expect(snippets.curl).toContain(LIVE_TESTNET_SHOWCASE.vaultAddress);
+    expect(snippets.cast).toContain("totalReceipts()(uint256)");
+    expect(snippets.cast).toContain("principalPolicies");
+    expect(snippets.viem).toContain("createPublicClient");
+  });
+
+  it("executes multi-hop A2A workflow chaining Hop 1 receipt into Hop 2 and tracking rolling spend", async () => {
+    const gatekeeper = createSeededGatekeeper("testnet", "250.00");
+    const hop1 = await executeA2ASettlement({
+      gatekeeper,
+      network: "testnet",
+      task: AGENT_TASK_CATALOG[0],
+      amountUsdc: "12.50",
+      maxPerTxUsdc: "25.00",
+      dailyCapUsdc: "100.00",
+      nonce: 1n
+    });
+    expect(hop1.decision.status).toBe("SETTLED");
+
+    const hop2 = await executeA2ASettlement({
+      gatekeeper,
+      network: "testnet",
+      task: AGENT_TASK_CATALOG[2],
+      amountUsdc: "8.25",
+      maxPerTxUsdc: "25.00",
+      dailyCapUsdc: "100.00",
+      nonce: 2n
+    });
+    expect(hop2.decision.status).toBe("SETTLED");
+    expect(gatekeeper.getUsedNonceCount()).toBe(2);
+    expect(gatekeeper.getVaultBalance(SANDBOX_BUYER_ADDRESS, SETTLEMENT_TOKENS.USDC.address)).toBe(
+      parseUnits("229.25", 6)
+    );
+    expect(gatekeeper.getProviderEarnings(SANDBOX_PROVIDER_ADDRESS, SETTLEMENT_TOKENS.USDC.address)).toBe(
+      parseUnits("20.75", 6)
+    );
+  });
+
+  it("blocks explicitly revoked EIP-712 mandate digests via revokeMandate()", async () => {
+    const gatekeeper = createSeededGatekeeper("testnet", "100.00");
+    const nowSec = 1_800_000_000n;
+    const taskHash = hashCanonicalTaskPayload({ job: "revoke-digest-test" });
+    const mandate: PaymentMandate = {
+      buyerAgent: SANDBOX_BUYER_ADDRESS,
+      providerAgent: SANDBOX_PROVIDER_ADDRESS,
+      token: SETTLEMENT_TOKENS.USDC.address,
+      amount: parseUnits("5.00", 6),
+      maxPerTx: parseUnits("25.00", 6),
+      dailyCap: parseUnits("100.00", 6),
+      nonce: 777n,
+      validAfter: nowSec - 10n,
+      validBefore: nowSec + 300n,
+      taskHash
+    };
+    const domain = buildMandateDomain(133, gatekeeper.getVerifyingContract());
+    const signed = await signPaymentMandate(SANDBOX_BUYER_KEY, domain, mandate);
+
+    gatekeeper.revokeMandate(mandate);
+    const decision = await gatekeeper.settleMandate({
+      mandate,
+      signature: signed.signature,
+      expectedTaskHash: taskHash,
+      executionProofHash: taskHash,
+      currentTimeSec: nowSec
+    });
+    expect(decision.status).toBe("REJECTED");
+    if (decision.status === "REJECTED") {
+      expect(decision.errorCode).toBe("ERR_MANDATE_REVOKED");
+    }
+  });
+
+  it("rejects malformed or unsupported X-PAYMENT headers cleanly", () => {
+    expect(() => decodeXPaymentHeader("")).toThrow();
+    const badHeader = btoa(JSON.stringify({ version: "1.0", scheme: "unknown" }))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/g, "");
+    expect(() => decodeXPaymentHeader(badHeader)).toThrow("Unsupported X-PAYMENT scheme");
+  });
+
+  it("enforces principal dailyCapCeiling override below mandate dailyCap", async () => {
+    const gatekeeper = createSeededGatekeeper("testnet", "250.00");
+    gatekeeper.setPrincipalPolicy(SANDBOX_BUYER_ADDRESS, SETTLEMENT_TOKENS.USDC.address, {
+      maxPerTxCeiling: parseUnits("25.00", 6),
+      dailyCapCeiling: parseUnits("15.00", 6),
+      enforced: true,
+      frozen: false
+    });
+
+    const first = await executeA2ASettlement({
+      gatekeeper,
+      network: "testnet",
+      task: AGENT_TASK_CATALOG[1],
+      amountUsdc: "10.00",
+      maxPerTxUsdc: "25.00",
+      dailyCapUsdc: "200.00",
+      nonce: 1n
+    });
+    expect(first.decision.status).toBe("SETTLED");
+
+    const second = await executeA2ASettlement({
+      gatekeeper,
+      network: "testnet",
+      task: AGENT_TASK_CATALOG[1],
+      amountUsdc: "6.00",
+      maxPerTxUsdc: "25.00",
+      dailyCapUsdc: "200.00",
+      nonce: 2n
+    });
+    expect(second.decision.status).toBe("REJECTED");
+    if (second.decision.status === "REJECTED") {
+      expect(second.decision.errorCode).toBe("ERR_DAILY_CAP_EXCEEDED");
+    }
+  });
+
+  it("roundtrips serializeMandateForJson and rejects incomplete JSON payloads", () => {
+    const sample: PaymentMandate = {
+      buyerAgent: SANDBOX_BUYER_ADDRESS,
+      providerAgent: SANDBOX_PROVIDER_ADDRESS,
+      token: ZERO_ADDRESS,
+      amount: 500_000_000_000_000n,
+      maxPerTx: 5_000_000_000_000_000n,
+      dailyCap: 20_000_000_000_000_000n,
+      nonce: 2n,
+      validAfter: 1795352102n,
+      validBefore: 1795355762n,
+      taskHash: hashCanonicalTaskPayload({ hop: 2 })
+    };
+    const json = serializeMandateForJson(sample);
+    const parsed = deserializeMandateFromJson(json);
+    expect(parsed).toEqual(sample);
+
+    const incomplete = { ...json };
+    delete incomplete.taskHash;
+    expect(() => deserializeMandateFromJson(incomplete)).toThrow("Missing mandate field: taskHash");
   });
 });

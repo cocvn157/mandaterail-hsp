@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { KpiStrip } from "./components/KpiStrip";
+import { OnChainVerifier } from "./components/OnChainVerifier";
 import { ReceiptInspector } from "./components/ReceiptInspector";
 import { TopBar } from "./components/TopBar";
 import { WorkflowConsole } from "./components/WorkflowConsole";
@@ -19,6 +20,7 @@ import {
 import { MandateGatekeeper, type GatekeeperDecision } from "./protocol/gatekeeper";
 import {
   HSK_NETWORKS,
+  LIVE_TESTNET_SHOWCASE,
   probeHskNetwork,
   SETTLEMENT_TOKENS,
   type HskNetworkKey,
@@ -205,6 +207,8 @@ export default function App() {
         threatsBlocked={gk.getRejectedCount() + attackResults.filter((a) => a.blockedAsExpected).length}
       />
 
+      <OnChainVerifier />
+
       <main className="main-grid">
         <WorkflowConsole
           selectedTask={selectedTask}
@@ -245,23 +249,43 @@ export default function App() {
             <>
               {" "}
               <a
-                href={`${cfg.explorerUrl}/address/${cfg.defaultVaultAddress}`}
+                href={`${cfg.explorerUrl}/address/${cfg.defaultVaultAddress}?tab=contract`}
                 target="_blank"
                 rel="noreferrer"
                 className="mono"
                 style={{ color: "#34d399", textDecoration: "underline" }}
               >
-                Vault {cfg.defaultVaultAddress.slice(0, 8)}...{cfg.defaultVaultAddress.slice(-6)}
+                Verified Vault {cfg.defaultVaultAddress.slice(0, 8)}...{cfg.defaultVaultAddress.slice(-6)}
               </a>
               {" · "}
               <a
-                href={`${cfg.explorerUrl}/tx/0x539c74e0bebf40aa38e1aabf8e297e6e2ccca9c8b80d3ca41caf1e024a083c12`}
+                href={`${cfg.explorerUrl}/tx/${LIVE_TESTNET_SHOWCASE.settlementTx1Hash}`}
                 target="_blank"
                 rel="noreferrer"
                 className="mono"
                 style={{ color: "#38bdf8", textDecoration: "underline" }}
               >
-                Live Settle Tx 0x539c...3c12
+                Settle #1 0x539c...3c12
+              </a>
+              {" · "}
+              <a
+                href={`${cfg.explorerUrl}/tx/${LIVE_TESTNET_SHOWCASE.settlementTx2Hash}`}
+                target="_blank"
+                rel="noreferrer"
+                className="mono"
+                style={{ color: "#38bdf8", textDecoration: "underline" }}
+              >
+                Settle #2 0xc792...a167
+              </a>
+              {" · "}
+              <a
+                href={`${cfg.explorerUrl}/tx/${LIVE_TESTNET_SHOWCASE.policyTxHash}`}
+                target="_blank"
+                rel="noreferrer"
+                className="mono"
+                style={{ color: "#fbbf24", textDecoration: "underline" }}
+              >
+                Policy 0x5fcc...0899
               </a>
             </>
           )}
