@@ -18,7 +18,13 @@ import {
   SANDBOX_BUYER_KEY,
   SANDBOX_PROVIDER_ADDRESS
 } from "./a2aWorkflow";
-import { buildMandateDomain, hashCanonicalTaskPayload, signPaymentMandate, type PaymentMandate } from "./eip712";
+import {
+  buildMandateDomain,
+  computeMandateDigest,
+  hashCanonicalTaskPayload,
+  signPaymentMandate,
+  type PaymentMandate
+} from "./eip712";
 import { HSK_NETWORKS, LIVE_TESTNET_SHOWCASE, SETTLEMENT_TOKENS, ZERO_ADDRESS } from "./networks";
 import { MANDATE_VAULT_ABI } from "./vaultAbi";
 
@@ -41,6 +47,7 @@ export interface OnChainReceiptSummary {
   taskHash: `0x${string}`;
   executionProofHash: `0x${string}`;
   settledAt: bigint;
+  digestVerified: boolean;
   mandate: PaymentMandate;
   signature: `0x${string}`;
 }
@@ -89,7 +96,7 @@ export interface DecodedVaultRevert {
 }
 
 export interface OnChainRevertProof {
-  mode: "replay-tx1" | "replay-tx2" | "over-max-tx" | "invalid-sig";
+  mode: "replay-tx1" | "replay-tx2" | "over-max-tx" | "invalid-sig" | "expired";
   title: string;
   revertedAsExpected: boolean;
   errorName: string;
@@ -272,6 +279,10 @@ async function fetchReceiptFromTx(
           executionProofHash: `0x${string}`;
           settledAt: bigint;
         };
+        const expectedDigest = computeMandateDigest(
+          buildMandateDomain(HSK_NETWORKS.testnet.chainId, LIVE_TESTNET_SHOWCASE.vaultAddress),
+          rawMandate
+        );
         return {
           index: params.index,
           label: params.label,
@@ -291,6 +302,7 @@ async function fetchReceiptFromTx(
           taskHash: args.taskHash,
           executionProofHash: args.executionProofHash,
           settledAt: args.settledAt,
+          digestVerified: expectedDigest.toLowerCase() === args.mandateDigest.toLowerCase(),
           mandate: rawMandate,
           signature
         };
@@ -513,7 +525,7 @@ export async function proveReplayProtectionOnChain(
 }
 
 export async function proveLiveGuardrailRevertOnChain(
-  mode: "over-max-tx" | "invalid-sig",
+  mode: "over-max-tx" | "invalid-sig" | "expired",
   rpcUrl = HSK_NETWORKS.testnet.rpcUrl
 ): Promise<OnChainRevertProof> {
   const started = performance.now();
@@ -529,6 +541,8 @@ export async function proveLiveGuardrailRevertOnChain(
   });
 
   const isOverCap = mode === "over-max-tx";
+  const isExpired = mode === "expired";
+  const nonceByMode = isOverCap ? 990001n : isExpired ? 990003n : 990002n;
   const mandate: PaymentMandate = {
     buyerAgent: SANDBOX_BUYER_ADDRESS,
     providerAgent: SANDBOX_PROVIDER_ADDRESS,
@@ -536,18 +550,20 @@ export async function proveLiveGuardrailRevertOnChain(
     amount: parseUnits(isOverCap ? "50.00" : "10.00", 6),
     maxPerTx: parseUnits("25.00", 6),
     dailyCap: parseUnits("100.00", 6),
-    nonce: isOverCap ? 990001n : 990002n,
-    validAfter: block.timestamp - 60n,
-    validBefore: block.timestamp + 300n,
+    nonce: nonceByMode,
+    validAfter: block.timestamp - 3600n,
+    validBefore: isExpired ? block.timestamp - 60n : block.timestamp + 300n,
     taskHash
   };
 
-  const signingKey = isOverCap ? SANDBOX_BUYER_KEY : SANDBOX_ATTACKER_KEY;
+  const signingKey = mode === "invalid-sig" ? SANDBOX_ATTACKER_KEY : SANDBOX_BUYER_KEY;
   const signed = await signPaymentMandate(signingKey, domain, mandate);
   const title = isOverCap
     ? "Live EVM Check: 50 USDC Mandate vs 25 USDC maxPerTx"
-    : "Live EVM Check: Forged Attacker ECDSA Signer";
-  const expectedError = isOverCap ? "OverMaxPerTx" : "InvalidSignature";
+    : isExpired
+      ? "Live EVM Check: Expired Mandate TTL (validBefore < blockTime)"
+      : "Live EVM Check: Forged Attacker ECDSA Signer";
+  const expectedError = isOverCap ? "OverMaxPerTx" : isExpired ? "MandateExpired" : "InvalidSignature";
 
   try {
     await client.simulateContract({
@@ -591,32 +607,51 @@ export function buildVerificationSnippets(
   const rpc = HSK_NETWORKS.testnet.rpcUrl;
   const totalReceiptsSelector = toFunctionSelector("totalReceipts()");
   return {
-    curl: `# 1. Read totalReceipts() selector ${totalReceiptsSelector} directly from HSK Testnet (133)
+    curl: `# 1. Read totalReceipts() (${totalReceiptsSelector}) on HSK 133
 curl -s -X POST ${rpc} \\
   -H "Content-Type: application/json" \\
-  -d '{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"to":"${vaultAddress}","data":"${totalReceiptsSelector}"},"latest"]}'
+  -d '{"jsonrpc":"2.0","id":1,"method":"eth_call",
+  "params":[{"to":"${vaultAddress}",
+  "data":"${totalReceiptsSelector}"},"latest"]}'
 
-# 2. Verify deployed bytecode exists on-chain
+# 2. Verify deployed vault bytecode on-chain
 curl -s -X POST ${rpc} \\
   -H "Content-Type: application/json" \\
-  -d '{"jsonrpc":"2.0","id":2,"method":"eth_getCode","params":["${vaultAddress}","latest"]}'`,
+  -d '{"jsonrpc":"2.0","id":2,"method":"eth_getCode",
+  "params":["${vaultAddress}","latest"]}'`,
 
-    cast: `# Read live vault state & principal guardrail policy via Foundry cast
-cast call ${vaultAddress} "totalReceipts()(uint256)" --rpc-url ${rpc}
-cast call ${vaultAddress} "usedNonces(address,uint256)(bool)" ${buyerAddress} 2 --rpc-url ${rpc}
-cast call ${vaultAddress} "principalPolicies(address,address)(uint256,uint256,bool,bool)" ${buyerAddress} ${ZERO_ADDRESS} --rpc-url ${rpc}`,
+    cast: `# Read vault state & principal guardrails via Foundry cast
+cast call ${vaultAddress} \\
+  "totalReceipts()(uint256)" --rpc-url ${rpc}
+cast call ${vaultAddress} \\
+  "usedNonces(address,uint256)(bool)" \\
+  ${buyerAddress} 2 --rpc-url ${rpc}
+cast call ${vaultAddress} \\
+  "principalPolicies(address,address)(uint256,uint256,bool,bool)" \\
+  ${buyerAddress} ${ZERO_ADDRESS} --rpc-url ${rpc}`,
 
     viem: `import { createPublicClient, http, parseAbi } from "viem";
 
-const client = createPublicClient({ transport: http("${rpc}") });
+const client = createPublicClient({
+  transport: http("${rpc}")
+});
 const abi = parseAbi([
   "function totalReceipts() view returns (uint256)",
   "function usedNonces(address,uint256) view returns (bool)"
 ]);
 
 const [receipts, nonce2Used] = await Promise.all([
-  client.readContract({ address: "${vaultAddress}", abi, functionName: "totalReceipts" }),
-  client.readContract({ address: "${vaultAddress}", abi, functionName: "usedNonces", args: ["${buyerAddress}", 2n] })
+  client.readContract({
+    address: "${vaultAddress}",
+    abi,
+    functionName: "totalReceipts"
+  }),
+  client.readContract({
+    address: "${vaultAddress}",
+    abi,
+    functionName: "usedNonces",
+    args: ["${buyerAddress}", 2n]
+  })
 ]);
 console.log({ receipts: receipts.toString(), nonce2Used });`
   };

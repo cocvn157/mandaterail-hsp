@@ -116,7 +116,7 @@ export const HSK_NETWORKS: Record<HskNetworkKey, HskNetworkConfig> = {
       symbol: "HSK",
       decimals: 18
     },
-    defaultVaultAddress: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+    defaultVaultAddress: "0x0000000000000000000000000000000000000177",
     settlementNote:
       "Production L2 target (post-win Mainnet 177 migration via organizer gas grant — zero-capital compliant)."
   }

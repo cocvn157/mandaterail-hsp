@@ -70,7 +70,7 @@ export function OnChainVerifier() {
     setProving(false);
   };
 
-  const handleProveGuardrail = async (mode: "over-max-tx" | "invalid-sig") => {
+  const handleProveGuardrail = async (mode: "over-max-tx" | "invalid-sig" | "expired") => {
     setProving(true);
     const result = await proveLiveGuardrailRevertOnChain(mode);
     setRevertProof(result);
@@ -217,7 +217,12 @@ export function OnChainVerifier() {
                 <div className="receipt-proof-card">
                   <div className="receipt-proof-top">
                     <div>
-                      <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>{activeReceipt.label}</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                        <span style={{ fontSize: "0.82rem", fontWeight: 700 }}>{activeReceipt.label}</span>
+                        {activeReceipt.digestVerified && (
+                          <span className="badge badge-emerald mono">EIP-712 Digest Verified</span>
+                        )}
+                      </div>
                       <div className="mono" style={{ fontSize: "0.71rem", color: "#94a3b8" }}>
                         {activeReceipt.workerLabel} · Block #{activeReceipt.blockNumber.toString()} · Gas{" "}
                         {activeReceipt.gasUsed.toLocaleString()}
@@ -248,9 +253,15 @@ export function OnChainVerifier() {
                       <span className="kv-v">{activeReceipt.taskHash}</span>
                     </div>
                     <div>
-                      <span className="kv-k">amount / nonce:</span>{" "}
+                      <span className="kv-k">executionProofHash:</span>{" "}
+                      <span className="kv-v">{activeReceipt.executionProofHash}</span>
+                    </div>
+                    <div>
+                      <span className="kv-k">settlement:</span>{" "}
                       <span className="kv-v">
-                        {activeReceipt.amountFormattedHsk} HSK · Nonce #{activeReceipt.nonce.toString()}
+                        {activeReceipt.amountFormattedHsk} HSK · Nonce #{activeReceipt.nonce.toString()} ·{" "}
+                        {activeReceipt.buyerAgent.slice(0, 8)}... → {activeReceipt.providerAgent.slice(0, 8)}... ·{" "}
+                        {new Date(Number(activeReceipt.settledAt) * 1000).toISOString().replace(".000Z", "Z")}
                       </span>
                     </div>
                   </div>
@@ -340,6 +351,14 @@ export function OnChainVerifier() {
                   disabled={proving}
                 >
                   Prove InvalidSignature
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-amber btn-sm"
+                  onClick={() => void handleProveGuardrail("expired")}
+                  disabled={proving}
+                >
+                  Prove MandateExpired
                 </button>
               </div>
 

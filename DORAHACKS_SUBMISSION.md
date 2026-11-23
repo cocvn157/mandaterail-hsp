@@ -34,7 +34,7 @@ As AI agents transition from chat assistants to autonomous economic actors, Agen
   4. **Principal Policy Activation (`setPrincipalPolicy`, Block `#36082755`):** [`0x5fccb1b99fe7bd328ee01caab9ce6c98880a48848262d38469c9439bd26c0899`](https://testnet-explorer.hskchain.net/tx/0x5fccb1b99fe7bd328ee01caab9ce6c98880a48848262d38469c9439bd26c0899) (`maxPerTxCeiling: 0.005 HSK`, `dailyCapCeiling: 0.02 HSK`, `enforced: true`, `frozen: false`)
 - **Browser-Native Zero-Wallet Judge Verifier (`src/components/OnChainVerifier.tsx`):**
   - Queries `https://testnet.hsk.xyz` directly via `viem` `eth_call` with zero wallet setup.
-  - Displays live block number, bytecode presence, `totalReceipts() == 2`, active `PrincipalPolicy`, clickable decoded **Receipt #1** & **Receipt #2**, and live EVM revert provers (`NonceAlreadyUsed`, `OverMaxPerTx`, `InvalidSignature`).
+  - Displays live block number, bytecode presence, `totalReceipts() == 2`, active `PrincipalPolicy`, clickable decoded **Receipt #1** & **Receipt #2** (with EIP-712 digest verification & `executionProofHash`), and live EVM revert provers (`NonceAlreadyUsed`, `OverMaxPerTx`, `InvalidSignature`, `MandateExpired`).
   - Includes **Circle Sepolia USDC (`0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`, chainId `11155111`)** dual-rail readiness, inline **A2A SVG Architecture Diagram**, and 5-second `curl` / `cast` / `viem` copy snippets.
 - **HTTP `402` (`x402`) Challenge-Response Codec (`src/protocol/x402.ts`) & EIP-712 Cryptography (`src/protocol/eip712.ts`):**
   - Worker agents issue Base64URL `X-PAYMENT-REQUIRED` bound to canonical `taskHash`; orchestrators reply with signed EIP-712 `X-PAYMENT` (`PaymentMandate`).
@@ -49,7 +49,7 @@ As AI agents transition from chat assistants to autonomous economic actors, Agen
 - **Smart Contract:** Solidity `^0.8.24` compiled with `solc v0.8.39+commit.ce47f2c8`, Blockscout verified (`0xc91469d4acc815b485f5b961bf49c7f0764a50cf`)
 - **Cryptography & Chain Client:** `viem` (ECDSA EIP-712 signing/recovery, ABI encoding, `eth_call` revert decoding, HashKey Chain & Sepolia JSON-RPC)
 - **Frontend Console:** React 19, TypeScript (strict), Vite 7, Lucide Icons
-- **Verification:** Vitest (`29/29` passing contract, ABI parity, revert-decoding, and protocol tests), live HSK Testnet `133` transactions & `eth_call` probes, `1280×720` live demo video capture
+- **Verification:** Vitest (`33/33` passing contract, ABI parity, revert-decoding, and protocol tests), live HSK Testnet `133` transactions & `eth_call` probes, `1280×720` live demo video capture
 
 ---
 

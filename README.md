@@ -41,8 +41,8 @@ Built for **HSK Chain Horizon Hackathon · Seoul (Track 2: Agent Payments & A2A 
 
 1. Open the live web console: https://cocvn157.github.io/mandaterail-hsp/ (no wallet connection required).
 2. In **Live On-Chain Verifier & Judge Playground (HSK Testnet 133)**, verify the live block height, **Blockscout Verified (`solc v0.8.39`)** badge, bytecode size (`8,215 bytes`), `totalReceipts() == 2`, and enforced `PrincipalPolicy`.
-3. Click **Receipt #1** and **Receipt #2** to inspect decoded on-chain `SettlementReceipt` logs fetched live from `https://testnet.hsk.xyz`.
-4. Click **Prove Replay Protection On-Chain**, **Prove OverMaxPerTx**, and **Prove InvalidSignature** to trigger real zero-gas `eth_call` simulations against `0xc91469d4acc815b485f5b961bf49c7f0764a50cf` and view decoded EVM custom error reverts (`NonceAlreadyUsed`, `OverMaxPerTx`, `InvalidSignature`).
+3. Click **Receipt #1** and **Receipt #2** to inspect decoded on-chain `SettlementReceipt` logs (`receiptId`, `mandateDigest`, `taskHash`, `executionProofHash`, verified EIP-712 digest badge) fetched live from `https://testnet.hsk.xyz`.
+4. Click **Prove Replay Protection On-Chain**, **Prove OverMaxPerTx**, **Prove InvalidSignature**, and **Prove MandateExpired** to trigger real zero-gas `eth_call` simulations against `0xc91469d4acc815b485f5b961bf49c7f0764a50cf` and view decoded EVM custom error reverts (`NonceAlreadyUsed`, `OverMaxPerTx`, `InvalidSignature`, `MandateExpired`).
 5. Use the **5-Second Verification Snippets** (`curl`, `cast`, `viem`) to verify on-chain state directly from any terminal, and run **Run 6 Guardrail Attacks** in the interactive A2A simulator below.
 
 ---
@@ -115,7 +115,7 @@ tests/
   contract.test.ts             # Solidity compilation, ABI parity & Blockscout bytecode SHA-256 tests
   protocol.test.ts             # Cryptography, x402 codec, revert decoding & multi-hop A2A tests
 demo/
-  mandaterail-hsp-demo.mp4     # 1280x720 H.264 live console walkthrough
+  mandaterail-hsp-demo.mp4     # Local untracked 1280x720 H.264 walkthrough for DoraHacks upload
 ```
 
 ---
@@ -131,7 +131,7 @@ npm.cmd install
 # 2. Compile MandateSettlementVault.sol -> artifacts/MandateSettlementVault.json
 npm.cmd run compile:contracts
 
-# 3. Run full test suite (29 deterministic unit & contract tests)
+# 3. Run full test suite (33 deterministic unit & contract tests)
 npm.cmd test
 
 # 4. Type-check and build production web bundle

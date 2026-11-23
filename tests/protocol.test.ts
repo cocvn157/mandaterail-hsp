@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { encodeErrorResult, parseUnits } from "viem";
+import { encodeErrorResult, parseUnits, toFunctionSelector } from "viem";
 import {
   buildMandateDomain,
   deserializeMandateFromJson,
@@ -557,5 +557,44 @@ describe("Live On-Chain Verifier, Error Decoding & Dual-Rail Readiness", () => {
     const incomplete = { ...json };
     delete incomplete.taskHash;
     expect(() => deserializeMandateFromJson(incomplete)).toThrow("Missing mandate field: taskHash");
+  });
+
+  it("decodes MandateExpired and AgentFrozen custom errors from raw EVM revert bytes", () => {
+    const expiredRaw = encodeErrorResult({
+      abi: MANDATE_VAULT_ABI,
+      errorName: "MandateExpired",
+      args: [1_800_000_200n, 1_800_000_100n]
+    });
+    const expiredDecoded = decodeVaultRevertError(expiredRaw);
+    expect(expiredDecoded.errorName).toBe("MandateExpired");
+    expect(expiredDecoded.args).toEqual(["1800000200", "1800000100"]);
+
+    const frozenRaw = encodeErrorResult({
+      abi: MANDATE_VAULT_ABI,
+      errorName: "AgentFrozen"
+    });
+    const frozenDecoded = decodeVaultRevertError(frozenRaw);
+    expect(frozenDecoded.errorName).toBe("AgentFrozen");
+    expect(frozenDecoded.summary).toBe("AgentFrozen()");
+  });
+
+  it("handles plain Error instances gracefully in decodeVaultRevertError", () => {
+    const decoded = decodeVaultRevertError(new Error("RPC timeout after 6000ms"));
+    expect(decoded.errorName).toBe("RpcOrUnknownError");
+    expect(decoded.summary).toBe("RPC timeout after 6000ms");
+  });
+
+  it("keeps mainnet staging verifyingContract isolated from Testnet worker/buyer keys", () => {
+    expect(HSK_NETWORKS.mainnet.defaultVaultAddress).not.toBe(SANDBOX_BUYER_ADDRESS);
+    expect(HSK_NETWORKS.mainnet.defaultVaultAddress).not.toBe(LIVE_TESTNET_SHOWCASE.workerAAddress);
+    expect(HSK_NETWORKS.mainnet.defaultVaultAddress).toMatch(/^0x[0-9a-fA-F]{40}$/);
+  });
+
+  it("keeps verification snippets compact and aligned with totalReceipts() selector", () => {
+    const snippets = buildVerificationSnippets();
+    expect(toFunctionSelector("totalReceipts()")).toBe("0xa23a720f");
+    for (const line of snippets.curl.split("\n")) {
+      expect(line.length).toBeLessThanOrEqual(72);
+    }
   });
 });
